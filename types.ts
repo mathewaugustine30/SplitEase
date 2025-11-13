@@ -1,4 +1,3 @@
-
 export interface Person {
   id: string;
   name: string;
@@ -47,3 +46,8 @@ export const EXPENSE_CATEGORIES: Category[] = [
     { id: 'settle', name: 'Settle Up', icon: 'settle' },
     { id: 'other', name: 'Other', icon: 'other' },
 ];
+
+export interface User {
+  email: string;
+  password: string;
+}
