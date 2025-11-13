@@ -1,4 +1,5 @@
 import React from 'react';
+import { EXPENSE_CATEGORIES } from '../../types';
 
 export const UsersIcon = ({ className = "w-6 h-6" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -96,3 +97,18 @@ export const LogoutIcon = ({ className = "w-6 h-6" }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
     </svg>
 );
+
+
+export const CategoryIcon: React.FC<{ categoryId?: string, className?: string }> = ({ categoryId, className="w-5 h-5" }) => {
+    const category = EXPENSE_CATEGORIES.find(c => c.id === categoryId);
+    if (!category) return <TagIcon className={className} />;
+
+    switch(category.icon) {
+        case 'food': return <FoodIcon className={className} />;
+        case 'travel': return <TravelIcon className={className} />;
+        case 'utilities': return <UtilitiesIcon className={className} />;
+        case 'entertainment': return <EntertainmentIcon className={className} />;
+        case 'settle': return <SettleUpIcon className={className} />;
+        default: return <TagIcon className={className} />;
+    }
+}

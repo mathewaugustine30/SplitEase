@@ -1,42 +1,26 @@
-
 import React, { useState } from 'react';
 import { Group, Person, Expense, EXPENSE_CATEGORIES } from '../types';
-import { DocumentAddIcon, UserPlusIcon, FoodIcon, TravelIcon, UtilitiesIcon, EntertainmentIcon, TagIcon, SettleUpIcon } from './ui/Icons';
+import { DocumentAddIcon, UserPlusIcon, CategoryIcon, SettleUpIcon } from './ui/Icons';
 import { calculateBalances, simplifyDebts } from '../services/balanceService';
 import Avatar from './ui/Avatar';
 
 interface GroupViewProps {
   group: Group;
-  friends: Person[];
+  persons: Person[];
   expenses: Expense[];
   onAddExpense: () => void;
   onAddMembers: () => void;
   onSettleUp: () => void;
 }
 
-const CategoryIcon: React.FC<{ categoryId?: string, className?: string }> = ({ categoryId, className="w-5 h-5" }) => {
-    const category = EXPENSE_CATEGORIES.find(c => c.id === categoryId);
-    if (!category) return <TagIcon className={className} />;
-
-    switch(category.icon) {
-        case 'food': return <FoodIcon className={className} />;
-        case 'travel': return <TravelIcon className={className} />;
-        case 'utilities': return <UtilitiesIcon className={className} />;
-        case 'entertainment': return <EntertainmentIcon className={className} />;
-        case 'settle': return <SettleUpIcon className={className} />;
-        default: return <TagIcon className={className} />;
-    }
-}
-
-
-const GroupView: React.FC<GroupViewProps> = ({ group, friends, expenses, onAddExpense, onAddMembers, onSettleUp }) => {
+const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddExpense, onAddMembers, onSettleUp }) => {
   const [filterCategoryId, setFilterCategoryId] = useState<string>('all');
 
-  const groupMembers = friends.filter(f => group.memberIds.includes(f.id));
+  const groupMembers = persons.filter(p => group.memberIds.includes(p.id));
   const groupExpenses = expenses.filter(e => e.groupId === group.id);
   const balances = calculateBalances(groupMembers, groupExpenses);
   const simplifiedDebts = simplifyDebts(balances);
-  const getPersonName = (id: string) => friends.find(f => f.id === id)?.name || 'Unknown';
+  const getPersonName = (id: string) => persons.find(p => p.id === id)?.name || 'Unknown';
   const getCategoryName = (id?: string) => EXPENSE_CATEGORIES.find(c => c.id === id)?.name || 'Other';
 
   const filteredExpenses = groupExpenses.filter(expense => {
@@ -53,9 +37,9 @@ const GroupView: React.FC<GroupViewProps> = ({ group, friends, expenses, onAddEx
             {groupMembers.map(m => (
                 <Avatar key={m.id} person={m} className="inline-block h-8 w-8 rounded-full ring-2 ring-white" />
             ))}
-            <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+            {groupMembers.length > 0 && <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
                 +{groupMembers.length}
-            </div>
+            </div>}
           </div>
         </div>
         <div className="flex items-center space-x-2 flex-shrink-0">

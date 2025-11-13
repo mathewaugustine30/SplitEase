@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { Person, Group, Expense, User } from './types';
@@ -29,6 +30,9 @@ function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [activeView, setActiveView] = useState<ViewType>({ view: 'dashboard', id: null });
 
+  const currentUserPerson: Person = { id: user.email, name: 'You' };
+  const allPersons = [currentUserPerson, ...friends];
+
   const handleAddFriend = (friend: Omit<Person, 'id'>) => {
     setFriends(prev => [...prev, { ...friend, id: crypto.randomUUID() }]);
   };
@@ -57,7 +61,7 @@ function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
     if (!selectedGroup) return;
 
     const groupExpenses = expenses.filter(e => e.groupId === selectedGroup.id);
-    const groupMembers = friends.filter(f => selectedGroup.memberIds.includes(f.id));
+    const groupMembers = allPersons.filter(f => selectedGroup.memberIds.includes(f.id));
     const balances = calculateBalances(groupMembers, groupExpenses);
     const simplifiedDebts = simplifyDebts(balances);
 
@@ -66,7 +70,7 @@ function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
         return;
     }
 
-    const getPersonName = (id: string) => friends.find(f => f.id === id)?.name || 'Unknown';
+    const getPersonName = (id: string) => allPersons.find(f => f.id === id)?.name || 'Unknown';
 
     const settlementExpenses: Omit<Expense, 'id'>[] = simplifiedDebts.map(debt => ({
       groupId: selectedGroup.id,
@@ -90,7 +94,7 @@ function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
       if (group) {
         return <GroupView 
                   group={group} 
-                  friends={friends} 
+                  persons={allPersons} 
                   expenses={expenses} 
                   onAddExpense={() => setActiveModal('addExpense')} 
                   onAddMembers={() => setActiveModal('addMembers')}
@@ -98,10 +102,10 @@ function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
                 />;
       }
     }
-    return <Dashboard friends={friends} expenses={expenses} />;
+    return <Dashboard persons={allPersons} expenses={expenses} />;
   };
 
-  const selectedGroupMembers = friends.filter(f => selectedGroup?.memberIds.includes(f.id));
+  const selectedGroupMembers = allPersons.filter(f => selectedGroup?.memberIds.includes(f.id));
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-brand-light font-sans">
@@ -129,6 +133,7 @@ function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
         onClose={() => setActiveModal(null)}
         onAddGroup={handleAddGroup}
         friends={friends}
+        currentUserId={currentUserPerson.id}
       />
       {selectedGroup && (
         <AddExpenseModal
@@ -154,7 +159,7 @@ function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
           onClose={() => setActiveModal(null)}
           onConfirm={handleSettleUp}
           group={selectedGroup}
-          friends={friends}
+          persons={allPersons}
           expenses={expenses}
         />
       )}

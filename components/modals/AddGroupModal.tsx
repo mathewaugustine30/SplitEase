@@ -9,9 +9,10 @@ interface AddGroupModalProps {
   onClose: () => void;
   onAddGroup: (group: Group) => void;
   friends: Person[];
+  currentUserId: string;
 }
 
-const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, onAddGroup, friends }) => {
+const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, onAddGroup, friends, currentUserId }) => {
   const [name, setName] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<Set<string>>(new Set());
 
@@ -29,11 +30,11 @@ const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, onAddGro
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim() && selectedFriends.size > 0) {
+    if (name.trim()) {
       onAddGroup({
         id: crypto.randomUUID(),
         name: name.trim(),
-        memberIds: Array.from(selectedFriends),
+        memberIds: Array.from(new Set([currentUserId, ...Array.from(selectedFriends)])),
       });
       setName('');
       setSelectedFriends(new Set());
@@ -60,7 +61,23 @@ const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, onAddGro
           <div>
             <label className="block text-sm font-medium text-gray-700">Select Members</label>
             <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-2 space-y-2">
-              {friends.length > 0 ? friends.map(friend => (
+              <div className="flex items-center opacity-75">
+                <input
+                  id={`friend-${currentUserId}`}
+                  type="checkbox"
+                  checked={true}
+                  disabled
+                  className="h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary"
+                />
+                <label htmlFor={`friend-${currentUserId}`} className="ml-3 flex items-center text-sm text-gray-900 cursor-not-allowed">
+                    <Avatar person={{ id: currentUserId, name: 'You' }} className="w-6 h-6 mr-2" />
+                    You
+                </label>
+              </div>
+
+              {friends.length > 0 && <hr className="my-1" />}
+              
+              {friends.map(friend => (
                 <div key={friend.id} className="flex items-center">
                   <input
                     id={`friend-${friend.id}`}
@@ -74,15 +91,16 @@ const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, onAddGro
                     {friend.name}
                   </label>
                 </div>
-              )) : (
-                <p className="text-sm text-gray-500">No friends to add. Please add a friend first.</p>
+              ))}
+               {friends.length === 0 && (
+                <p className="text-sm text-gray-500 pl-3 pt-1">You can add friends to this group later.</p>
               )}
             </div>
           </div>
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              disabled={friends.length === 0}
+              disabled={!name.trim()}
               className="bg-brand-primary text-white px-4 py-2 rounded-md hover:bg-brand-secondary disabled:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
             >
               Create Group

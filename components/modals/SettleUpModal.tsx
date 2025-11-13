@@ -10,18 +10,18 @@ interface SettleUpModalProps {
   onClose: () => void;
   onConfirm: () => void;
   group?: Group;
-  friends: Person[];
+  persons: Person[];
   expenses: Expense[];
 }
 
-const SettleUpModal: React.FC<SettleUpModalProps> = ({ isOpen, onClose, onConfirm, group, friends, expenses }) => {
+const SettleUpModal: React.FC<SettleUpModalProps> = ({ isOpen, onClose, onConfirm, group, persons, expenses }) => {
     if (!group) return null;
 
     const groupExpenses = expenses.filter(e => e.groupId === group.id);
-    const groupMembers = friends.filter(f => group.memberIds.includes(f.id));
+    const groupMembers = persons.filter(p => group.memberIds.includes(p.id));
     const balances = calculateBalances(groupMembers, groupExpenses);
     const simplifiedDebts = simplifyDebts(balances);
-    const getPerson = (id: string) => friends.find(f => f.id === id);
+    const getPerson = (id: string) => persons.find(f => f.id === id);
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Settle debts in ${group.name}`}>
