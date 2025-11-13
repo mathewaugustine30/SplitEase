@@ -1,0 +1,5 @@
+{
+  "name": "SplitEase - Expense Splitter",
+  "description": "A web application to manage shared expenses with friends and groups, similar to Splitwise. Track who owes whom and settle up debts easily. All data is stored locally in your browser.",
+  "requestFramePermissions": []
+}
