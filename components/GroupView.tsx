@@ -4,6 +4,7 @@ import { DocumentAddIcon, UserPlusIcon, CategoryIcon, SettleUpIcon } from './ui/
 import { calculateBalances, simplifyDebts } from '../services/balanceService';
 import Avatar from './ui/Avatar';
 import LineChart from './ui/LineChart';
+import DonutChart from './ui/DonutChart';
 
 interface GroupViewProps {
   group: Group;
@@ -62,6 +63,34 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
     yesterday.setDate(today.getDate() - 1);
     chartData.push({ date: yesterday, value: 0 }, { date: today, value: 0 });
   }
+  
+  const categoryTotals = spendingExpenses.reduce((acc, expense) => {
+    const categoryId = expense.categoryId || 'other';
+    acc[categoryId] = (acc[categoryId] || 0) + expense.amount;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const categoryColors: { [key: string]: string } = {
+    food: '#F59E0B',
+    travel: '#3B82F6',
+    utilities: '#10B981',
+    entertainment: '#EC4899',
+    settle: '#6B7280',
+    other: '#8B5CF6',
+  };
+
+  // FIX: Use Object.keys to avoid type inference issues with Object.entries that caused a compile error on the sort method.
+  const donutChartData = Object.keys(categoryTotals)
+    .map((categoryId) => {
+        const total = categoryTotals[categoryId];
+        const category = EXPENSE_CATEGORIES.find(c => c.id === categoryId);
+        return {
+            name: category?.name || 'Other',
+            value: total,
+            color: categoryColors[categoryId] || categoryColors.other,
+        };
+    })
+    .sort((a, b) => b.value - a.value);
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -118,10 +147,18 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
         </div>
       </div>
       
-      <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-        <h2 className="text-xl font-bold text-brand-dark mb-4">Total Expense Over Time</h2>
-        <div className="h-64">
-          <LineChart data={chartData} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-bold text-brand-dark mb-4">Total Expense Over Time</h2>
+          <div className="h-64">
+            <LineChart data={chartData} />
+          </div>
+        </div>
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-bold text-brand-dark mb-4">Expense Breakdown</h2>
+          <div className="h-64">
+            <DonutChart data={donutChartData} />
+          </div>
         </div>
       </div>
 
