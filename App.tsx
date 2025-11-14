@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Person, Group, Expense, SimplifiedDebt } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -18,7 +18,7 @@ import { auth, db } from './firebaseConfig';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollectionData } from 'react-firebase-hooks/firestore';
 import { User as FirebaseUser, signOut } from 'firebase/auth';
-import { collection, addDoc, doc, updateDoc, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, query, where, getDocs } from 'firebase/firestore';
 
 
 type ModalType = 'addGroup' | 'addExpense' | 'addMembers' | 'settleUp' | null;
@@ -41,42 +41,42 @@ function MainApp({ user }: { user: FirebaseUser }) {
   const groups = groupsData || [];
   
   // Fetch expenses for all groups the user is a member of
-  useEffect(() => {
+  const fetchAllExpenses = useCallback(async () => {
     if (!groupsData || groupsLoading) return;
 
-    const fetchExpenses = async () => {
-        setExpensesLoading(true);
-        if (groupsData.length === 0) {
-            setExpenses([]);
-            setExpensesLoading(false);
-            return;
-        }
+    setExpensesLoading(true);
+    if (groupsData.length === 0) {
+      setExpenses([]);
+      setExpensesLoading(false);
+      return;
+    }
 
-        const expensePromises = groupsData.map(group => {
-            const groupExpensesRef = collection(db, 'groups', group.id, 'expenses');
-            return getDocs(query(groupExpensesRef));
+    const expensePromises = groupsData.map(group => {
+      const groupExpensesRef = collection(db, 'groups', group.id, 'expenses');
+      return getDocs(query(groupExpensesRef));
+    });
+
+    try {
+      const groupExpenseSnapshots = await Promise.all(expensePromises);
+      const allExpensesData: Expense[] = [];
+      groupExpenseSnapshots.forEach(snapshot => {
+        snapshot.forEach(doc => {
+          allExpensesData.push({ id: doc.id, ...doc.data() } as Expense);
         });
-
-        try {
-            const groupExpenseSnapshots = await Promise.all(expensePromises);
-            const allExpenses: Expense[] = [];
-            groupExpenseSnapshots.forEach(snapshot => {
-                snapshot.forEach(doc => {
-                    allExpenses.push({ id: doc.id, ...doc.data() } as Expense);
-                });
-            });
-            // Sort all expenses by date descending
-            allExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            setExpenses(allExpenses);
-        } catch (error) {
-            console.error("Error fetching expenses:", error);
-        } finally {
-            setExpensesLoading(false);
-        }
-    };
-
-    fetchExpenses();
+      });
+      // Sort all expenses by date descending
+      allExpensesData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setExpenses(allExpensesData);
+    } catch (error) {
+      console.error("Error fetching expenses:", error);
+    } finally {
+      setExpensesLoading(false);
+    }
   }, [groupsData, groupsLoading]);
+
+  useEffect(() => {
+    fetchAllExpenses();
+  }, [fetchAllExpenses]);
 
 
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -90,6 +90,7 @@ function MainApp({ user }: { user: FirebaseUser }) {
 
   const handleAddExpense = async (expense: Omit<Expense, 'id'>) => {
     await addDoc(collection(db, 'groups', expense.groupId, 'expenses'), expense);
+    await fetchAllExpenses();
   };
 
   const handleAddMembersToGroup = async (groupId: string, newMemberUids: string[]) => {
@@ -132,6 +133,7 @@ function MainApp({ user }: { user: FirebaseUser }) {
     });
     
     await Promise.all(settlementPromises);
+    await fetchAllExpenses();
     setActiveModal(null);
   };
 
@@ -149,6 +151,7 @@ function MainApp({ user }: { user: FirebaseUser }) {
     };
     
     await addDoc(collection(db, 'groups', groupId, 'expenses'), settlementExpense);
+    await fetchAllExpenses();
   };
   
   const handleLogout = async () => {
