@@ -1,20 +1,32 @@
 import React, { useState } from 'react';
 import { MailIcon } from '../ui/Icons';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../../firebaseConfig';
 
 interface ForgotPasswordPageProps {
-    onReset: (email: string) => void;
     onNavigate: (page: 'login') => void;
-    error: string;
-    message: string;
 }
 
-const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onReset, onNavigate, error, message }) => {
+const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onNavigate }) => {
     const [email, setEmail] = useState('');
+    const [error, setError] = useState('');
+    const [message, setMessage] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
+        setMessage('');
+        setLoading(true);
         if (email) {
-            onReset(email);
+            try {
+                await sendPasswordResetEmail(auth, email);
+                setMessage(`If an account exists for ${email}, a password reset link has been sent.`);
+            } catch (err: any) {
+                setError("Failed to send reset email. Please check the address and try again.");
+            } finally {
+                setLoading(false);
+            }
         }
     }
 
@@ -41,8 +53,8 @@ const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onReset, onNavi
                     </div>
                 )}
                 {!message && (
-                    <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary">
-                        Send Reset Link
+                    <button type="submit" disabled={loading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:bg-gray-400">
+                        {loading ? 'Sending...' : 'Send Reset Link'}
                     </button>
                 )}
             </form>

@@ -1,20 +1,39 @@
 import React, { useState } from 'react';
 import { MailIcon, LockClosedIcon } from '../ui/Icons';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../firebaseConfig';
 
 interface LoginPageProps {
-    onLogin: (email: string, pass: string) => void;
     onNavigate: (page: 'signup' | 'forgot') => void;
-    error: string;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate, error }) => {
+const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
+        setLoading(true);
         if (email && password) {
-            onLogin(email, password);
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                // Auth state change will handle navigation
+            } catch (err: any) {
+                switch(err.code) {
+                    case 'auth/user-not-found':
+                    case 'auth/wrong-password':
+                    case 'auth/invalid-credential':
+                        setError('Invalid email or password.');
+                        break;
+                    default:
+                        setError('Failed to login. Please try again.');
+                }
+            } finally {
+                setLoading(false);
+            }
         }
     }
 
@@ -44,8 +63,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate, error }) => 
                 <div className="text-sm text-right">
                     <button type="button" onClick={() => onNavigate('forgot')} className="font-medium text-brand-accent hover:text-brand-primary">Forgot password?</button>
                 </div>
-                <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary">
-                    Login
+                <button type="submit" disabled={loading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:bg-gray-400">
+                    {loading ? 'Logging in...' : 'Login'}
                 </button>
             </form>
             <p className="text-sm text-center text-gray-600">

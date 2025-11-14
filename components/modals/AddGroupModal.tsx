@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Modal from '../ui/Modal';
 import Avatar from '../ui/Avatar';
@@ -7,7 +6,7 @@ import { Person, Group } from '../../types';
 interface AddGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddGroup: (group: Group) => void;
+  onAddGroup: (group: Omit<Group, 'id'>) => void;
   friends: Person[];
   currentUserId: string;
 }
@@ -32,7 +31,6 @@ const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, onAddGro
     e.preventDefault();
     if (name.trim()) {
       onAddGroup({
-        id: crypto.randomUUID(),
         name: name.trim(),
         memberIds: Array.from(new Set([currentUserId, ...Array.from(selectedFriends)])),
       });

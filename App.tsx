@@ -1,7 +1,5 @@
-
 import React, { useState } from 'react';
-import { useLocalStorage } from './hooks/useLocalStorage';
-import { Person, Group, Expense, User, SimplifiedDebt } from './types';
+import { Person, Group, Expense, SimplifiedDebt } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import GroupView from './components/GroupView';
@@ -16,48 +14,62 @@ import LoginPage from './components/auth/LoginPage';
 import SignupPage from './components/auth/SignupPage';
 import ForgotPasswordPage from './components/auth/ForgotPasswordPage';
 
+// Firebase imports
+import { auth, db } from './firebaseConfig';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { useCollectionData } from 'react-firebase-hooks/firestore';
+import { User as FirebaseUser, signOut } from 'firebase/auth';
+import { collection, addDoc, doc, updateDoc, query, orderBy } from 'firebase/firestore';
+
+
 type ModalType = 'addFriend' | 'addGroup' | 'addExpense' | 'addMembers' | 'settleUp' | null;
 type ViewType = { view: 'dashboard' | 'group'; id: string | null };
 type AuthPageType = 'login' | 'signup' | 'forgot';
 
 // Main application component, rendered after successful login
-function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
-  const userKey = user.email;
-  const [friends, setFriends] = useLocalStorage<Person[]>(`friends_${userKey}`, []);
-  const [groups, setGroups] = useLocalStorage<Group[]>(`groups_${userKey}`, []);
-  const [expenses, setExpenses] = useLocalStorage<Expense[]>(`expenses_${userKey}`, []);
+function MainApp({ user }: { user: FirebaseUser }) {
+  const friendsRef = collection(db, 'users', user.uid, 'friends');
+  const groupsRef = collection(db, 'users', user.uid, 'groups');
+  const expensesRef = collection(db, 'users', user.uid, 'expenses');
+
+  const [friendsData, friendsLoading] = useCollectionData<Person>(friendsRef, { idField: 'id' });
+  const [groupsData, groupsLoading] = useCollectionData<Group>(groupsRef, { idField: 'id' });
+  const [expensesData, expensesLoading] = useCollectionData<Expense>(query(expensesRef, orderBy('date', 'desc')), { idField: 'id' });
+
+  const friends = friendsData || [];
+  const groups = groupsData || [];
+  const expenses = expensesData || [];
   
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [activeView, setActiveView] = useState<ViewType>({ view: 'dashboard', id: null });
 
-  const currentUserPerson: Person = { id: user.email, name: 'You' };
+  const currentUserPerson: Person = { id: user.uid, name: 'You', avatarUrl: user.photoURL || undefined };
   const allPersons = [currentUserPerson, ...friends];
 
-  const handleAddFriend = (friend: Omit<Person, 'id'>) => {
-    setFriends(prev => [...prev, { ...friend, id: crypto.randomUUID() }]);
+  const handleAddFriend = async (friend: Omit<Person, 'id'>) => {
+    await addDoc(friendsRef, friend);
   };
 
-  const handleAddGroup = (group: Group) => {
-    setGroups(prev => [...prev, group]);
+  const handleAddGroup = async (group: Omit<Group, 'id'>) => {
+    await addDoc(groupsRef, group);
   };
 
-  const handleAddExpense = (expense: Omit<Expense, 'id'>) => {
-    setExpenses(prev => [...prev, { ...expense, id: crypto.randomUUID() }]);
+  const handleAddExpense = async (expense: Omit<Expense, 'id'>) => {
+    await addDoc(expensesRef, expense);
   };
 
-  const handleAddMembersToGroup = (groupId: string, newMemberIds: string[]) => {
-    setGroups(prevGroups =>
-      prevGroups.map(group =>
-        group.id === groupId
-          ? { ...group, memberIds: [...new Set([...group.memberIds, ...newMemberIds])] }
-          : group
-      )
-    );
+  const handleAddMembersToGroup = async (groupId: string, newMemberIds: string[]) => {
+    const groupDocRef = doc(db, 'users', user.uid, 'groups', groupId);
+    const group = groups.find(g => g.id === groupId);
+    if(group) {
+        const updatedMemberIds = Array.from(new Set([...group.memberIds, ...newMemberIds]));
+        await updateDoc(groupDocRef, { memberIds: updatedMemberIds });
+    }
   };
   
   const selectedGroup = groups.find(g => g.id === activeView.id);
 
-  const handleSettleUp = () => {
+  const handleSettleUp = async () => {
     if (!selectedGroup) return;
 
     const groupExpenses = expenses.filter(e => e.groupId === selectedGroup.id);
@@ -72,23 +84,24 @@ function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
 
     const getPersonName = (id: string) => allPersons.find(f => f.id === id)?.name || 'Unknown';
 
-    const settlementExpenses: Omit<Expense, 'id'>[] = simplifiedDebts.map(debt => ({
-      groupId: selectedGroup.id,
-      description: `Settle up: ${getPersonName(debt.from)} paid ${getPersonName(debt.to)}`,
-      amount: debt.amount,
-      paidById: debt.from,
-      split: [{ personId: debt.to, amount: debt.amount }],
-      date: new Date().toISOString(),
-      categoryId: 'settle',
-    }));
+    const settlementPromises = simplifiedDebts.map(debt => {
+        const newExpense: Omit<Expense, 'id'> = {
+            groupId: selectedGroup.id,
+            description: `Settle up: ${getPersonName(debt.from)} paid ${getPersonName(debt.to)}`,
+            amount: debt.amount,
+            paidById: debt.from,
+            split: [{ personId: debt.to, amount: debt.amount }],
+            date: new Date().toISOString(),
+            categoryId: 'settle',
+        };
+        return addDoc(expensesRef, newExpense);
+    });
     
-    const newExpensesWithId = settlementExpenses.map(exp => ({ ...exp, id: crypto.randomUUID() }));
-
-    setExpenses(prev => [...prev, ...newExpensesWithId]);
+    await Promise.all(settlementPromises);
     setActiveModal(null);
   };
 
-  const handleSettleIndividualDebt = (groupId: string, debt: SimplifiedDebt) => {
+  const handleSettleIndividualDebt = async (groupId: string, debt: SimplifiedDebt) => {
     const getPersonName = (id: string) => allPersons.find(p => p.id === id)?.name || 'Unknown';
 
     const settlementExpense: Omit<Expense, 'id'> = {
@@ -101,8 +114,20 @@ function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
       categoryId: 'settle',
     };
     
-    setExpenses(prev => [...prev, { ...settlementExpense, id: crypto.randomUUID() }]);
+    await addDoc(expensesRef, settlementExpense);
   };
+  
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
+
+  if (friendsLoading || groupsLoading || expensesLoading) {
+      return (
+          <div className="flex h-screen w-screen items-center justify-center bg-brand-light text-brand-dark">
+              Loading your data...
+          </div>
+      );
+  }
 
   const renderView = () => {
     if (activeView.view === 'group' && activeView.id) {
@@ -133,8 +158,8 @@ function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
         onAddGroup={() => setActiveModal('addGroup')}
         onSelectView={(view, id) => setActiveView({ view, id })}
         activeView={activeView}
-        currentUserEmail={user.email}
-        onLogout={onLogout}
+        currentUserEmail={user.email || "User"}
+        onLogout={handleLogout}
       />
       <main className="flex-1 overflow-y-auto">
         {renderView()}
@@ -186,75 +211,29 @@ function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
 
 // Top-level App component handles authentication routing
 function App() {
-  const [users, setUsers] = useLocalStorage<User[]>('splitease_users', []);
-  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('splitease_currentUser', null);
-  
+  const [user, loading] = useAuthState(auth);
   const [authPage, setAuthPage] = useState<AuthPageType>('login');
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
 
-  const resetMessages = () => {
-      setError('');
-      setMessage('');
+  if (loading) {
+    return <div className="flex h-screen w-screen items-center justify-center bg-brand-light text-brand-dark">Authenticating...</div>
   }
-
-  const handleNavigate = (page: AuthPageType) => {
-      resetMessages();
-      setAuthPage(page);
-  }
-
-  const handleLogin = (email: string, pass: string) => {
-    resetMessages();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (user && user.password === pass) {
-      setCurrentUser(user);
-    } else {
-      setError('Invalid email or password.');
-    }
-  };
-
-  const handleSignup = (email: string, pass: string) => {
-    resetMessages();
-    if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-      setError('An account with this email already exists.');
-    } else {
-      const newUser = { email, password: pass };
-      setUsers(prev => [...prev, newUser]);
-      setCurrentUser(newUser);
-    }
-  };
   
-  const handleForgotPassword = (email: string) => {
-    resetMessages();
-    // This is a simulation for a frontend-only app
-    if(users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-        setMessage(`If an account exists for ${email}, a password reset link has been sent.`);
-    } else {
-        setError("No account found with that email address.");
-    }
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    handleNavigate('login');
-  };
-
-  if (!currentUser) {
+  if (!user) {
     let page;
     switch (authPage) {
         case 'signup':
-            page = <SignupPage onSignup={handleSignup} onNavigate={handleNavigate} error={error} />;
+            page = <SignupPage onNavigate={setAuthPage} />;
             break;
         case 'forgot':
-            page = <ForgotPasswordPage onReset={handleForgotPassword} onNavigate={handleNavigate} error={error} message={message} />;
+            page = <ForgotPasswordPage onNavigate={setAuthPage} />;
             break;
         default:
-            page = <LoginPage onLogin={handleLogin} onNavigate={handleNavigate} error={error} />;
+            page = <LoginPage onNavigate={setAuthPage} />;
     }
     return <AuthLayout>{page}</AuthLayout>;
   }
 
-  return <MainApp user={currentUser} onLogout={handleLogout} />;
+  return <MainApp user={user} />;
 }
 
 export default App;
