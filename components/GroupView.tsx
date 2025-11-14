@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Group, Person, Expense, EXPENSE_CATEGORIES, SimplifiedDebt } from '../types';
 import { DocumentAddIcon, UserPlusIcon, CategoryIcon, SettleUpIcon } from './ui/Icons';
@@ -16,6 +15,13 @@ interface GroupViewProps {
   onSettleUp: () => void;
   onSettleIndividualDebt: (debt: SimplifiedDebt) => void;
 }
+
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amount);
+};
 
 const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddExpense, onAddMembers, onSettleUp, onSettleIndividualDebt }) => {
   const [filterCategoryId, setFilterCategoryId] = useState<string>('all');
@@ -97,7 +103,7 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
 
   return (
     <div className="p-4 md:p-8 space-y-6">
-      <header className="flex justify-between items-start">
+      <header className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-brand-dark">{group.name}</h1>
           <div className="flex -space-x-2 overflow-hidden mt-2">
@@ -109,25 +115,25 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
             </div>}
           </div>
         </div>
-        <div className="flex items-center space-x-2 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
             onClick={onSettleUp}
             disabled={simplifiedDebts.length === 0}
-            className="flex items-center space-x-2 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="flex items-center justify-center space-x-2 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             <SettleUpIcon className="w-5 h-5"/>
             <span>Settle Up</span>
           </button>
           <button
             onClick={onAddMembers}
-            className="flex items-center space-x-2 bg-brand-accent text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-accent"
+            className="flex items-center justify-center space-x-2 bg-brand-accent text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-accent"
           >
             <UserPlusIcon className="w-5 h-5"/>
             <span>Add Members</span>
           </button>
           <button
             onClick={onAddExpense}
-            className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-md hover:bg-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+            className="flex items-center justify-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-md hover:bg-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
           >
             <DocumentAddIcon className="w-5 h-5"/>
             <span>Add Expense</span>
@@ -138,15 +144,15 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-lg shadow-md">
             <h3 className="text-sm font-semibold text-gray-500">Group Spending</h3>
-            <p className="text-2xl font-bold text-brand-dark">${groupTotalSpending.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-brand-dark">{formatCurrency(groupTotalSpending)}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-md">
             <h3 className="text-sm font-semibold text-green-600">Total Owed in Group</h3>
-            <p className="text-2xl font-bold text-green-600">${totalOwed.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(totalOwed)}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-md">
             <h3 className="text-sm font-semibold text-red-600">Total Debt in Group</h3>
-            <p className="text-2xl font-bold text-red-600">${Math.abs(totalDebt).toFixed(2)}</p>
+            <p className="text-2xl font-bold text-red-600">{formatCurrency(Math.abs(totalDebt))}</p>
         </div>
       </div>
       
@@ -177,7 +183,7 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
                     if (!fromPerson || !toPerson) return null;
 
                     return (
-                        <li key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                        <li key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-3 bg-gray-50 rounded-md gap-2">
                             <div className="flex items-center space-x-3">
                                 <Avatar person={fromPerson} className="w-8 h-8" />
                                 <div className="flex items-center space-x-2 text-sm">
@@ -186,8 +192,8 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
                                     <span className="font-semibold text-brand-primary">{toPerson.name}</span>
                                 </div>
                             </div>
-                            <div className="flex items-center space-x-3">
-                                <span className="font-bold text-md text-brand-dark">${debt.amount.toFixed(2)}</span>
+                            <div className="flex items-center justify-between sm:justify-end sm:space-x-3">
+                                <span className="font-bold text-md text-brand-dark">{formatCurrency(debt.amount)}</span>
                                 <button
                                     onClick={() => onSettleIndividualDebt(debt)}
                                     className="px-3 py-1 text-xs font-semibold text-white bg-brand-primary rounded-md hover:bg-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
@@ -238,7 +244,7 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
                           <span>{new Date(expense.date).toLocaleDateString()}</span>
                       </div>
                     </div>
-                    <span className="font-bold text-lg text-brand-dark">${expense.amount.toFixed(2)}</span>
+                    <span className="font-bold text-lg text-brand-dark">{formatCurrency(expense.amount)}</span>
                   </li>
                 ))}
               </ul>

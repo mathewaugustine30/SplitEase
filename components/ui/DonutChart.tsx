@@ -10,6 +10,14 @@ interface DonutChartProps {
   data: DonutChartDataPoint[];
 }
 
+const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+};
+
+
 const DonutChart: React.FC<DonutChartProps> = ({ data }) => {
   const size = 250;
   const strokeWidth = 25;
@@ -68,7 +76,7 @@ const DonutChart: React.FC<DonutChartProps> = ({ data }) => {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
             <span className="text-gray-500 text-sm">Total</span>
-            <span className="text-2xl font-bold text-brand-dark">${total.toFixed(2)}</span>
+            <span className="text-2xl font-bold text-brand-dark">{formatCurrency(total)}</span>
         </div>
       </div>
       <div className="flex flex-col space-y-2 text-sm max-w-[150px] ml-4 mt-4 md:mt-0">

@@ -9,6 +9,13 @@ interface DashboardProps {
   expenses: Expense[];
 }
 
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amount);
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ persons, expenses }) => {
   // Balance calculations must include settlements to be accurate
   const balances = calculateBalances(persons, expenses);
@@ -49,15 +56,15 @@ const Dashboard: React.FC<DashboardProps> = ({ persons, expenses }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold text-brand-accent">Total Spending</h3>
-          <p className="text-3xl font-bold text-brand-accent">${totalSpending.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-brand-accent">{formatCurrency(totalSpending)}</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold text-green-600">Total you are owed</h3>
-          <p className="text-3xl font-bold text-green-600">${totalOwed.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-green-600">{formatCurrency(totalOwed)}</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold text-red-600">Total you owe</h3>
-          <p className="text-3xl font-bold text-red-600">${Math.abs(totalDebt).toFixed(2)}</p>
+          <p className="text-3xl font-bold text-red-600">{formatCurrency(Math.abs(totalDebt))}</p>
         </div>
       </div>
 
@@ -82,7 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({ persons, expenses }) => {
                           <span className="font-semibold text-brand-primary">{toPerson.name}</span>
                         </div>
                       </div>
-                      <span className="font-bold text-lg text-brand-dark">${debt.amount.toFixed(2)}</span>
+                      <span className="font-bold text-lg text-brand-dark">{formatCurrency(debt.amount)}</span>
                     </li>
                   );
                 })}
@@ -106,7 +113,7 @@ const Dashboard: React.FC<DashboardProps> = ({ persons, expenses }) => {
                                           <CategoryIcon categoryId={category.id} className="w-5 h-5 text-gray-500" />
                                           <span className="font-medium text-gray-700">{category.name}</span>
                                       </div>
-                                      <span className="font-semibold text-brand-dark">${category.total.toFixed(2)}</span>
+                                      <span className="font-semibold text-brand-dark">{formatCurrency(category.total)}</span>
                                   </div>
                                   <div className="w-full h-2 bg-gray-200 rounded-full">
                                       <div className="h-2 bg-brand-primary rounded-full" style={{ width: `${percentage}%` }}></div>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Person, Group } from '../types';
 import { UserPlusIcon, CollectionIcon, PlusCircleIcon, LogoutIcon, UserCircleIcon } from './ui/Icons';
@@ -16,7 +17,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ friends, groups, onAddFriend, onAddGroup, onSelectView, activeView, currentUserEmail, onLogout }) => {
   return (
-    <div className="w-full md:w-64 bg-brand-dark text-white p-4 flex flex-col h-screen">
+    <div className="w-full md:w-64 bg-brand-dark text-white p-4 flex flex-col md:h-screen">
       <h1 className="text-2xl font-bold text-brand-primary mb-6">SplitEase</h1>
       
       <nav className="flex-grow overflow-y-auto">

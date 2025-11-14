@@ -68,11 +68,11 @@ const AddFriendModal: React.FC<AddFriendModalProps> = ({ isOpen, onClose, onAddF
           
           <div>
              <label className="block text-sm font-medium text-gray-700">Profile Picture (Optional)</label>
-             <div className="mt-2 flex items-center space-x-4">
+             <div className="mt-2 flex flex-col sm:flex-row items-center gap-4">
                 <img 
                     src={avatarUrl || generateAvatar(name || '?')} 
                     alt="Avatar preview" 
-                    className="w-16 h-16 rounded-full object-cover bg-gray-200"
+                    className="w-16 h-16 rounded-full object-cover bg-gray-200 flex-shrink-0"
                 />
                 <div className="flex flex-col space-y-2">
                      <label htmlFor="avatarUpload" className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary">

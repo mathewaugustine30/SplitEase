@@ -9,6 +9,14 @@ interface LineChartProps {
   data: ChartDataPoint[];
 }
 
+const formatCurrencyAxis = (amount: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(amount);
+};
+
 const LineChart: React.FC<LineChartProps> = ({ data }) => {
     const width = 600;
     const height = 250;
@@ -51,7 +59,7 @@ const LineChart: React.FC<LineChartProps> = ({ data }) => {
                     <g key={tickValue} transform={`translate(0, ${yScale(tickValue)})`}>
                         <line x1={0} x2={chartWidth} stroke="#e5e7eb" strokeWidth="1" strokeDasharray="2,2" />
                         <text x="-10" y="4" textAnchor="end" fill="#6b7281" fontSize="10">
-                            ${tickValue.toFixed(0)}
+                            {formatCurrencyAxis(tickValue)}
                         </text>
                     </g>
                 ))}
