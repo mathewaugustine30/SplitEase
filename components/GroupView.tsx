@@ -3,6 +3,7 @@ import { Group, Person, Expense, EXPENSE_CATEGORIES } from '../types';
 import { DocumentAddIcon, UserPlusIcon, CategoryIcon, SettleUpIcon } from './ui/Icons';
 import { calculateBalances, simplifyDebts } from '../services/balanceService';
 import Avatar from './ui/Avatar';
+import LineChart from './ui/LineChart';
 
 interface GroupViewProps {
   group: Group;
@@ -32,6 +33,35 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
       if (filterCategoryId === 'all') return true;
       return expense.categoryId === filterCategoryId;
   });
+
+  const chartSpendingExpenses = groupExpenses
+    .filter(e => e.categoryId !== 'settle')
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  let cumulativeAmount = 0;
+  const chartData = chartSpendingExpenses.map(expense => {
+    cumulativeAmount += expense.amount;
+    return {
+      date: new Date(expense.date),
+      value: cumulativeAmount,
+    };
+  });
+
+  if (chartData.length > 0) {
+    const firstExpenseDate = chartData[0].date;
+    const dayBeforeFirstExpense = new Date(firstExpenseDate.getTime());
+    dayBeforeFirstExpense.setDate(firstExpenseDate.getDate() - 1);
+    
+    chartData.unshift({
+      date: dayBeforeFirstExpense,
+      value: 0
+    });
+  } else {
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    chartData.push({ date: yesterday, value: 0 }, { date: today, value: 0 });
+  }
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -88,6 +118,13 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
         </div>
       </div>
       
+      <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
+        <h2 className="text-xl font-bold text-brand-dark mb-4">Total Expense Over Time</h2>
+        <div className="h-64">
+          <LineChart data={chartData} />
+        </div>
+      </div>
+
       <div>
         <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold text-brand-dark">Expenses</h2>
