@@ -23,6 +23,11 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
   const getPersonName = (id: string) => persons.find(p => p.id === id)?.name || 'Unknown';
   const getCategoryName = (id?: string) => EXPENSE_CATEGORIES.find(c => c.id === id)?.name || 'Other';
 
+  const totalOwed = Array.from(balances.values()).filter(v => v > 0).reduce((sum, v) => sum + v, 0);
+  const totalDebt = Array.from(balances.values()).filter(v => v < 0).reduce((sum, v) => sum + v, 0);
+  const spendingExpenses = groupExpenses.filter(e => e.categoryId !== 'settle');
+  const groupTotalSpending = spendingExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+
   const filteredExpenses = groupExpenses.filter(expense => {
       if (filterCategoryId === 'all') return true;
       return expense.categoryId === filterCategoryId;
@@ -67,6 +72,21 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
           </button>
         </div>
       </header>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow-md">
+            <h3 className="text-sm font-semibold text-gray-500">Group Spending</h3>
+            <p className="text-2xl font-bold text-brand-dark">${groupTotalSpending.toFixed(2)}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-md">
+            <h3 className="text-sm font-semibold text-green-600">Total Owed in Group</h3>
+            <p className="text-2xl font-bold text-green-600">${totalOwed.toFixed(2)}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-md">
+            <h3 className="text-sm font-semibold text-red-600">Total Debt in Group</h3>
+            <p className="text-2xl font-bold text-red-600">${Math.abs(totalDebt).toFixed(2)}</p>
+        </div>
+      </div>
       
       <div>
         <div className="flex justify-between items-center mb-4">
