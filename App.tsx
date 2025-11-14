@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { Person, Group, Expense, User } from './types';
+import { Person, Group, Expense, User, SimplifiedDebt } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import GroupView from './components/GroupView';
@@ -88,6 +88,22 @@ function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
     setActiveModal(null);
   };
 
+  const handleSettleIndividualDebt = (groupId: string, debt: SimplifiedDebt) => {
+    const getPersonName = (id: string) => allPersons.find(p => p.id === id)?.name || 'Unknown';
+
+    const settlementExpense: Omit<Expense, 'id'> = {
+      groupId: groupId,
+      description: `Settle up: ${getPersonName(debt.from)} paid ${getPersonName(debt.to)}`,
+      amount: debt.amount,
+      paidById: debt.from,
+      split: [{ personId: debt.to, amount: debt.amount }],
+      date: new Date().toISOString(),
+      categoryId: 'settle',
+    };
+    
+    setExpenses(prev => [...prev, { ...settlementExpense, id: crypto.randomUUID() }]);
+  };
+
   const renderView = () => {
     if (activeView.view === 'group' && activeView.id) {
       const group = groups.find(g => g.id === activeView.id);
@@ -99,6 +115,7 @@ function MainApp({ user, onLogout }: { user: User; onLogout: () => void; }) {
                   onAddExpense={() => setActiveModal('addExpense')} 
                   onAddMembers={() => setActiveModal('addMembers')}
                   onSettleUp={() => setActiveModal('settleUp')}
+                  onSettleIndividualDebt={(debt) => handleSettleIndividualDebt(group.id, debt)}
                 />;
       }
     }
