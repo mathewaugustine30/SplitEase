@@ -6,7 +6,8 @@ import { generateAvatar } from '../ui/Avatar';
 interface AddFriendModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddFriend: (friend: Omit<Person, 'id'>) => void;
+  // FIX: Corrected Omit to use 'uid' instead of 'id' to match the Person type.
+  onAddFriend: (friend: Omit<Person, 'uid'>) => void;
 }
 
 const AddFriendModal: React.FC<AddFriendModalProps> = ({ isOpen, onClose, onAddFriend }) => {
