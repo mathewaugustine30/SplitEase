@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MailIcon, LockClosedIcon } from '../ui/Icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../firebaseConfig';
+import { auth, isFirebaseConfigValid } from '../../firebaseConfig';
 
 interface LoginPageProps {
     onNavigate: (page: 'signup' | 'forgot') => void;
@@ -17,6 +17,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
         e.preventDefault();
         setError('');
         setLoading(true);
+        
+        if (!isFirebaseConfigValid()) {
+            setError("Firebase configuration is missing or invalid. Please check your firebaseConfig.ts file.");
+            setLoading(false);
+            return;
+        }
+
         if (email && password) {
             try {
                 await signInWithEmailAndPassword(auth, email, password);

@@ -15,6 +15,17 @@ const firebaseConfig = {
   measurementId: "YOUR_MEASUREMENT_ID"
 };
 
+/**
+ * Checks if the firebase config has been filled out.
+ * @returns {boolean} True if the config is valid, false otherwise.
+ */
+export const isFirebaseConfigValid = () => {
+    return firebaseConfig.apiKey !== "YOUR_API_KEY" && 
+           firebaseConfig.projectId !== "YOUR_PROJECT_ID" &&
+           firebaseConfig.authDomain !== "YOUR_AUTH_DOMAIN";
+};
+
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);

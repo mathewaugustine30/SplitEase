@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { MailIcon, LockClosedIcon } from '../ui/Icons';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '../../firebaseConfig';
+import { auth, db, isFirebaseConfigValid } from '../../firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
+import { generateAvatar } from '../ui/Avatar';
 
 interface SignupPageProps {
     onNavigate: (page: 'login') => void;
@@ -18,6 +19,12 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+
+        if (!isFirebaseConfigValid()) {
+            setError("Firebase configuration is missing or invalid. Please check your firebaseConfig.ts file.");
+            return;
+        }
+
         if (password !== confirmPassword) {
             setError("Passwords don't match.");
             return;
@@ -27,17 +34,23 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
             try {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
+                const userName = user.email?.split('@')[0] || 'New User';
                 // Create user profile in Firestore
                 await setDoc(doc(db, "users", user.uid), {
                     uid: user.uid,
                     email: user.email,
-                    name: user.email?.split('@')[0] || 'New User',
+                    name: userName,
+                    avatarUrl: generateAvatar(userName),
                 });
                 // Auth state change will handle navigation
             } catch (err: any) {
+                console.error("Signup failed:", err);
                 if (err.code === 'auth/email-already-in-use') {
                     setError('An account with this email already exists.');
-                } else {
+                } else if (err.code === 'auth/invalid-api-key') {
+                     setError('Firebase API Key is invalid. Please check your firebaseConfig.ts file.');
+                }
+                else {
                     setError('Failed to create an account. Please try again.');
                 }
             } finally {

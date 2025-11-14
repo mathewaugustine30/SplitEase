@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MailIcon } from '../ui/Icons';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../../firebaseConfig';
+import { auth, isFirebaseConfigValid } from '../../firebaseConfig';
 
 interface ForgotPasswordPageProps {
     onNavigate: (page: 'login') => void;
@@ -18,6 +18,13 @@ const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onNavigate }) =
         setError('');
         setMessage('');
         setLoading(true);
+
+        if (!isFirebaseConfigValid()) {
+            setError("Firebase configuration is missing or invalid. Please check your firebaseConfig.ts file.");
+            setLoading(false);
+            return;
+        }
+
         if (email) {
             try {
                 await sendPasswordResetEmail(auth, email);
