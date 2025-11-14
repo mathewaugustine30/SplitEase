@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { MailIcon, LockClosedIcon } from '../ui/Icons';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
+import { doc, setDoc } from 'firebase/firestore';
 
 interface SignupPageProps {
     onNavigate: (page: 'login') => void;
@@ -24,7 +25,14 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
         setLoading(true);
         if (email && password) {
             try {
-                await createUserWithEmailAndPassword(auth, email, password);
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                // Create user profile in Firestore
+                await setDoc(doc(db, "users", user.uid), {
+                    uid: user.uid,
+                    email: user.email,
+                    name: user.email?.split('@')[0] || 'New User',
+                });
                 // Auth state change will handle navigation
             } catch (err: any) {
                 if (err.code === 'auth/email-already-in-use') {

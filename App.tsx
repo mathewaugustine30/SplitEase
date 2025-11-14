@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Person, Group, Expense, SimplifiedDebt } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import GroupView from './components/GroupView';
-import AddFriendModal from './components/modals/AddFriendModal';
 import AddGroupModal from './components/modals/AddGroupModal';
 import AddExpenseModal from './components/modals/AddExpenseModal';
 import AddMembersModal from './components/modals/AddMembersModal';
@@ -19,51 +18,86 @@ import { auth, db } from './firebaseConfig';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollectionData } from 'react-firebase-hooks/firestore';
 import { User as FirebaseUser, signOut } from 'firebase/auth';
-import { collection, addDoc, doc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, query, where, getDocs, orderBy } from 'firebase/firestore';
 
 
-type ModalType = 'addFriend' | 'addGroup' | 'addExpense' | 'addMembers' | 'settleUp' | null;
+type ModalType = 'addGroup' | 'addExpense' | 'addMembers' | 'settleUp' | null;
 type ViewType = { view: 'dashboard' | 'group'; id: string | null };
 type AuthPageType = 'login' | 'signup' | 'forgot';
 
 // Main application component, rendered after successful login
 function MainApp({ user }: { user: FirebaseUser }) {
-  const friendsRef = collection(db, 'users', user.uid, 'friends');
-  const groupsRef = collection(db, 'users', user.uid, 'groups');
-  const expensesRef = collection(db, 'users', user.uid, 'expenses');
-
-  const [friendsData, friendsLoading] = useCollectionData<Person>(friendsRef, { idField: 'id' });
-  const [groupsData, groupsLoading] = useCollectionData<Group>(groupsRef, { idField: 'id' });
-  const [expensesData, expensesLoading] = useCollectionData<Expense>(query(expensesRef, orderBy('date', 'desc')), { idField: 'id' });
-
-  const friends = friendsData || [];
-  const groups = groupsData || [];
-  const expenses = expensesData || [];
+  // Queries for top-level collections
+  const usersRef = collection(db, 'users');
+  const groupsQuery = query(collection(db, 'groups'), where('memberUids', 'array-contains', user.uid));
   
+  const [usersData, usersLoading] = useCollectionData<Person>(usersRef, { idField: 'uid' });
+  const [groupsData, groupsLoading] = useCollectionData<Group>(groupsQuery, { idField: 'id' });
+  
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expensesLoading, setExpensesLoading] = useState(true);
+
+  const allUsers = usersData || [];
+  const groups = groupsData || [];
+  
+  // Fetch expenses for all groups the user is a member of
+  useEffect(() => {
+    if (!groupsData || groupsLoading) return;
+
+    const fetchExpenses = async () => {
+        setExpensesLoading(true);
+        if (groupsData.length === 0) {
+            setExpenses([]);
+            setExpensesLoading(false);
+            return;
+        }
+
+        const expensePromises = groupsData.map(group => {
+            const groupExpensesRef = collection(db, 'groups', group.id, 'expenses');
+            return getDocs(query(groupExpensesRef));
+        });
+
+        try {
+            const groupExpenseSnapshots = await Promise.all(expensePromises);
+            const allExpenses: Expense[] = [];
+            groupExpenseSnapshots.forEach(snapshot => {
+                snapshot.forEach(doc => {
+                    allExpenses.push({ id: doc.id, ...doc.data() } as Expense);
+                });
+            });
+            // Sort all expenses by date descending
+            allExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setExpenses(allExpenses);
+        } catch (error) {
+            console.error("Error fetching expenses:", error);
+        } finally {
+            setExpensesLoading(false);
+        }
+    };
+
+    fetchExpenses();
+  }, [groupsData, groupsLoading]);
+
+
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [activeView, setActiveView] = useState<ViewType>({ view: 'dashboard', id: null });
 
-  const currentUserPerson: Person = { id: user.uid, name: 'You', avatarUrl: user.photoURL || undefined };
-  const allPersons = [currentUserPerson, ...friends];
-
-  const handleAddFriend = async (friend: Omit<Person, 'id'>) => {
-    await addDoc(friendsRef, friend);
-  };
+  const currentUser = allUsers.find(u => u.uid === user.uid) || { uid: user.uid, name: user.email?.split('@')[0] || "You", email: user.email! };
 
   const handleAddGroup = async (group: Omit<Group, 'id'>) => {
-    await addDoc(groupsRef, group);
+    await addDoc(collection(db, 'groups'), group);
   };
 
   const handleAddExpense = async (expense: Omit<Expense, 'id'>) => {
-    await addDoc(expensesRef, expense);
+    await addDoc(collection(db, 'groups', expense.groupId, 'expenses'), expense);
   };
 
-  const handleAddMembersToGroup = async (groupId: string, newMemberIds: string[]) => {
-    const groupDocRef = doc(db, 'users', user.uid, 'groups', groupId);
+  const handleAddMembersToGroup = async (groupId: string, newMemberUids: string[]) => {
+    const groupDocRef = doc(db, 'groups', groupId);
     const group = groups.find(g => g.id === groupId);
     if(group) {
-        const updatedMemberIds = Array.from(new Set([...group.memberIds, ...newMemberIds]));
-        await updateDoc(groupDocRef, { memberIds: updatedMemberIds });
+        const updatedMemberUids = Array.from(new Set([...group.memberUids, ...newMemberUids]));
+        await updateDoc(groupDocRef, { memberUids: updatedMemberUids });
     }
   };
   
@@ -73,7 +107,7 @@ function MainApp({ user }: { user: FirebaseUser }) {
     if (!selectedGroup) return;
 
     const groupExpenses = expenses.filter(e => e.groupId === selectedGroup.id);
-    const groupMembers = allPersons.filter(f => selectedGroup.memberIds.includes(f.id));
+    const groupMembers = allUsers.filter(f => selectedGroup.memberUids.includes(f.uid));
     const balances = calculateBalances(groupMembers, groupExpenses);
     const simplifiedDebts = simplifyDebts(balances);
 
@@ -82,19 +116,19 @@ function MainApp({ user }: { user: FirebaseUser }) {
         return;
     }
 
-    const getPersonName = (id: string) => allPersons.find(f => f.id === id)?.name || 'Unknown';
+    const getPersonName = (uid: string) => allUsers.find(f => f.uid === uid)?.name || 'Unknown';
 
     const settlementPromises = simplifiedDebts.map(debt => {
         const newExpense: Omit<Expense, 'id'> = {
             groupId: selectedGroup.id,
             description: `Settle up: ${getPersonName(debt.from)} paid ${getPersonName(debt.to)}`,
             amount: debt.amount,
-            paidById: debt.from,
-            split: [{ personId: debt.to, amount: debt.amount }],
+            paidByUid: debt.from,
+            split: [{ uid: debt.to, amount: debt.amount }],
             date: new Date().toISOString(),
             categoryId: 'settle',
         };
-        return addDoc(expensesRef, newExpense);
+        return addDoc(collection(db, 'groups', selectedGroup.id, 'expenses'), newExpense);
     });
     
     await Promise.all(settlementPromises);
@@ -102,26 +136,26 @@ function MainApp({ user }: { user: FirebaseUser }) {
   };
 
   const handleSettleIndividualDebt = async (groupId: string, debt: SimplifiedDebt) => {
-    const getPersonName = (id: string) => allPersons.find(p => p.id === id)?.name || 'Unknown';
+    const getPersonName = (uid: string) => allUsers.find(p => p.uid === uid)?.name || 'Unknown';
 
     const settlementExpense: Omit<Expense, 'id'> = {
       groupId: groupId,
       description: `Settle up: ${getPersonName(debt.from)} paid ${getPersonName(debt.to)}`,
       amount: debt.amount,
-      paidById: debt.from,
-      split: [{ personId: debt.to, amount: debt.amount }],
+      paidByUid: debt.from,
+      split: [{ uid: debt.to, amount: debt.amount }],
       date: new Date().toISOString(),
       categoryId: 'settle',
     };
     
-    await addDoc(expensesRef, settlementExpense);
+    await addDoc(collection(db, 'groups', groupId, 'expenses'), settlementExpense);
   };
   
   const handleLogout = async () => {
     await signOut(auth);
   };
 
-  if (friendsLoading || groupsLoading || expensesLoading) {
+  if (usersLoading || groupsLoading || expensesLoading) {
       return (
           <div className="flex h-screen w-screen items-center justify-center bg-brand-light text-brand-dark">
               Loading your data...
@@ -135,7 +169,7 @@ function MainApp({ user }: { user: FirebaseUser }) {
       if (group) {
         return <GroupView 
                   group={group} 
-                  persons={allPersons} 
+                  persons={allUsers} 
                   expenses={expenses} 
                   onAddExpense={() => setActiveModal('addExpense')} 
                   onAddMembers={() => setActiveModal('addMembers')}
@@ -144,17 +178,15 @@ function MainApp({ user }: { user: FirebaseUser }) {
                 />;
       }
     }
-    return <Dashboard persons={allPersons} expenses={expenses} />;
+    return <Dashboard persons={allUsers} expenses={expenses} />;
   };
 
-  const selectedGroupMembers = allPersons.filter(f => selectedGroup?.memberIds.includes(f.id));
+  const selectedGroupMembers = allUsers.filter(f => selectedGroup?.memberUids.includes(f.uid));
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-brand-light font-sans">
       <Sidebar
-        friends={friends}
         groups={groups}
-        onAddFriend={() => setActiveModal('addFriend')}
         onAddGroup={() => setActiveModal('addGroup')}
         onSelectView={(view, id) => setActiveView({ view, id })}
         activeView={activeView}
@@ -165,17 +197,12 @@ function MainApp({ user }: { user: FirebaseUser }) {
         {renderView()}
       </main>
 
-      <AddFriendModal
-        isOpen={activeModal === 'addFriend'}
-        onClose={() => setActiveModal(null)}
-        onAddFriend={handleAddFriend}
-      />
       <AddGroupModal
         isOpen={activeModal === 'addGroup'}
         onClose={() => setActiveModal(null)}
         onAddGroup={handleAddGroup}
-        friends={friends}
-        currentUserId={currentUserPerson.id}
+        users={allUsers}
+        currentUserUid={currentUser.uid}
       />
       {selectedGroup && (
         <AddExpenseModal
@@ -190,8 +217,8 @@ function MainApp({ user }: { user: FirebaseUser }) {
         <AddMembersModal
           isOpen={activeModal === 'addMembers'}
           onClose={() => setActiveModal(null)}
-          onAddMembers={(memberIds) => handleAddMembersToGroup(selectedGroup.id, memberIds)}
-          friends={friends}
+          onAddMembers={(memberUids) => handleAddMembersToGroup(selectedGroup.id, memberUids)}
+          users={allUsers}
           group={selectedGroup}
         />
       )}
@@ -201,7 +228,7 @@ function MainApp({ user }: { user: FirebaseUser }) {
           onClose={() => setActiveModal(null)}
           onConfirm={handleSettleUp}
           group={selectedGroup}
-          persons={allPersons}
+          persons={allUsers}
           expenses={expenses}
         />
       )}

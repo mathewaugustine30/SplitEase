@@ -1,20 +1,19 @@
-
 import { Person, Expense, SimplifiedDebt } from '../types';
 
 export const calculateBalances = (persons: Person[], expenses: Expense[]): Map<string, number> => {
   const balances = new Map<string, number>();
-  persons.forEach(p => balances.set(p.id, 0));
+  persons.forEach(p => balances.set(p.uid, 0));
 
   expenses.forEach(expense => {
-    const paidBy = expense.paidById;
+    const paidBy = expense.paidByUid;
     const amount = expense.amount;
     
     const paidByBalance = balances.get(paidBy) || 0;
     balances.set(paidBy, paidByBalance + amount);
 
     expense.split.forEach(s => {
-      const splitPersonBalance = balances.get(s.personId) || 0;
-      balances.set(s.personId, splitPersonBalance - s.amount);
+      const splitPersonBalance = balances.get(s.uid) || 0;
+      balances.set(s.uid, splitPersonBalance - s.amount);
     });
   });
 
@@ -22,14 +21,14 @@ export const calculateBalances = (persons: Person[], expenses: Expense[]): Map<s
 };
 
 export const simplifyDebts = (balances: Map<string, number>): SimplifiedDebt[] => {
-  const debtors: { id: string; amount: number }[] = [];
-  const creditors: { id: string; amount: number }[] = [];
+  const debtors: { uid: string; amount: number }[] = [];
+  const creditors: { uid: string; amount: number }[] = [];
 
-  balances.forEach((amount, id) => {
+  balances.forEach((amount, uid) => {
     if (amount < 0) {
-      debtors.push({ id, amount: amount });
+      debtors.push({ uid, amount: amount });
     } else if (amount > 0) {
-      creditors.push({ id, amount: amount });
+      creditors.push({ uid, amount: amount });
     }
   });
 
@@ -48,8 +47,8 @@ export const simplifyDebts = (balances: Map<string, number>): SimplifiedDebt[] =
 
     if (amountToSettle > 0.01) { // Threshold to avoid floating point issues
         transactions.push({
-            from: debtor.id,
-            to: creditor.id,
+            from: debtor.uid,
+            to: creditor.uid,
             amount: amountToSettle,
         });
 

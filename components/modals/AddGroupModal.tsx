@@ -7,21 +7,23 @@ interface AddGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddGroup: (group: Omit<Group, 'id'>) => void;
-  friends: Person[];
-  currentUserId: string;
+  users: Person[];
+  currentUserUid: string;
 }
 
-const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, onAddGroup, friends, currentUserId }) => {
+const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, onAddGroup, users, currentUserUid }) => {
   const [name, setName] = useState('');
-  const [selectedFriends, setSelectedFriends] = useState<Set<string>>(new Set());
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
 
-  const handleFriendToggle = (friendId: string) => {
-    setSelectedFriends(prev => {
+  const otherUsers = users.filter(u => u.uid !== currentUserUid);
+
+  const handleUserToggle = (uid: string) => {
+    setSelectedUsers(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(friendId)) {
-        newSet.delete(friendId);
+      if (newSet.has(uid)) {
+        newSet.delete(uid);
       } else {
-        newSet.add(friendId);
+        newSet.add(uid);
       }
       return newSet;
     });
@@ -32,10 +34,10 @@ const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, onAddGro
     if (name.trim()) {
       onAddGroup({
         name: name.trim(),
-        memberIds: Array.from(new Set([currentUserId, ...Array.from(selectedFriends)])),
+        memberUids: Array.from(new Set([currentUserUid, ...Array.from(selectedUsers)])),
       });
       setName('');
-      setSelectedFriends(new Set());
+      setSelectedUsers(new Set());
       onClose();
     }
   };
@@ -61,37 +63,37 @@ const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, onAddGro
             <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-2 space-y-2">
               <div className="flex items-center opacity-75">
                 <input
-                  id={`friend-${currentUserId}`}
+                  id={`user-${currentUserUid}`}
                   type="checkbox"
                   checked={true}
                   disabled
                   className="h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary"
                 />
-                <label htmlFor={`friend-${currentUserId}`} className="ml-3 flex items-center text-sm text-gray-900 cursor-not-allowed">
-                    <Avatar person={{ id: currentUserId, name: 'You' }} className="w-6 h-6 mr-2" />
+                <label htmlFor={`user-${currentUserUid}`} className="ml-3 flex items-center text-sm text-gray-900 cursor-not-allowed">
+                    <Avatar person={{ uid: currentUserUid, name: 'You' }} className="w-6 h-6 mr-2" />
                     You
                 </label>
               </div>
 
-              {friends.length > 0 && <hr className="my-1" />}
+              {otherUsers.length > 0 && <hr className="my-1" />}
               
-              {friends.map(friend => (
-                <div key={friend.id} className="flex items-center">
+              {otherUsers.map(user => (
+                <div key={user.uid} className="flex items-center">
                   <input
-                    id={`friend-${friend.id}`}
+                    id={`user-${user.uid}`}
                     type="checkbox"
-                    checked={selectedFriends.has(friend.id)}
-                    onChange={() => handleFriendToggle(friend.id)}
+                    checked={selectedUsers.has(user.uid)}
+                    onChange={() => handleUserToggle(user.uid)}
                     className="h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary"
                   />
-                  <label htmlFor={`friend-${friend.id}`} className="ml-3 flex items-center text-sm text-gray-900 cursor-pointer">
-                    <Avatar person={friend} className="w-6 h-6 mr-2" />
-                    {friend.name}
+                  <label htmlFor={`user-${user.uid}`} className="ml-3 flex items-center text-sm text-gray-900 cursor-pointer">
+                    <Avatar person={user} className="w-6 h-6 mr-2" />
+                    {user.name}
                   </label>
                 </div>
               ))}
-               {friends.length === 0 && (
-                <p className="text-sm text-gray-500 pl-3 pt-1">You can add friends to this group later.</p>
+               {otherUsers.length === 0 && (
+                <p className="text-sm text-gray-500 pl-3 pt-1">You can invite others to join and then add them to this group.</p>
               )}
             </div>
           </div>

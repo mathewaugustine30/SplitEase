@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Modal from '../ui/Modal';
 import { Person, Group, Expense } from '../../types';
@@ -18,10 +17,10 @@ const SettleUpModal: React.FC<SettleUpModalProps> = ({ isOpen, onClose, onConfir
     if (!group) return null;
 
     const groupExpenses = expenses.filter(e => e.groupId === group.id);
-    const groupMembers = persons.filter(p => group.memberIds.includes(p.id));
+    const groupMembers = persons.filter(p => group.memberUids.includes(p.uid));
     const balances = calculateBalances(groupMembers, groupExpenses);
     const simplifiedDebts = simplifyDebts(balances);
-    const getPerson = (id: string) => persons.find(f => f.id === id);
+    const getPerson = (uid: string) => persons.find(f => f.uid === uid);
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Settle debts in ${group.name}`}>

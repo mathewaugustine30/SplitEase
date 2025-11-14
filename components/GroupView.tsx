@@ -26,12 +26,12 @@ const formatCurrency = (amount: number): string => {
 const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddExpense, onAddMembers, onSettleUp, onSettleIndividualDebt }) => {
   const [filterCategoryId, setFilterCategoryId] = useState<string>('all');
 
-  const groupMembers = persons.filter(p => group.memberIds.includes(p.id));
+  const groupMembers = persons.filter(p => group.memberUids.includes(p.uid));
   const groupExpenses = expenses.filter(e => e.groupId === group.id);
   const balances = calculateBalances(groupMembers, groupExpenses);
   const simplifiedDebts = simplifyDebts(balances);
-  const getPerson = (id: string) => persons.find(p => p.id === id);
-  const getPersonName = (id: string) => getPerson(id)?.name || 'Unknown';
+  const getPerson = (uid: string) => persons.find(p => p.uid === uid);
+  const getPersonName = (uid: string) => getPerson(uid)?.name || 'Unknown';
   const getCategoryName = (id?: string) => EXPENSE_CATEGORIES.find(c => c.id === id)?.name || 'Other';
 
   const totalOwed = Array.from(balances.values()).filter(v => v > 0).reduce((sum, v) => sum + v, 0);
@@ -108,7 +108,7 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
           <h1 className="text-3xl font-bold text-brand-dark">{group.name}</h1>
           <div className="flex -space-x-2 overflow-hidden mt-2">
             {groupMembers.map(m => (
-                <Avatar key={m.id} person={m} className="inline-block h-8 w-8 rounded-full ring-2 ring-white" />
+                <Avatar key={m.uid} person={m} className="inline-block h-8 w-8 rounded-full ring-2 ring-white" />
             ))}
             {groupMembers.length > 0 && <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
                 +{groupMembers.length}
@@ -239,7 +239,7 @@ const GroupView: React.FC<GroupViewProps> = ({ group, persons, expenses, onAddEx
                       <div className="text-sm text-gray-500 flex items-center space-x-2">
                           <span>{getCategoryName(expense.categoryId)}</span>
                           <span>&bull;</span>
-                          <span>Paid by {getPersonName(expense.paidById)}</span>
+                          <span>Paid by {getPersonName(expense.paidByUid)}</span>
                            <span>&bull;</span>
                           <span>{new Date(expense.date).toLocaleDateString()}</span>
                       </div>

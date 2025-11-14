@@ -1,13 +1,9 @@
-
 import React from 'react';
 import { Person, Group } from '../types';
-import { UserPlusIcon, CollectionIcon, PlusCircleIcon, LogoutIcon, UserCircleIcon } from './ui/Icons';
-import Avatar from './ui/Avatar';
+import { CollectionIcon, PlusCircleIcon, LogoutIcon, UserCircleIcon } from './ui/Icons';
 
 interface SidebarProps {
-  friends: Person[];
   groups: Group[];
-  onAddFriend: () => void;
   onAddGroup: () => void;
   onSelectView: (view: 'dashboard' | 'group', id: string | null) => void;
   activeView: { view: 'dashboard' | 'group', id: string | null };
@@ -15,7 +11,7 @@ interface SidebarProps {
   onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ friends, groups, onAddFriend, onAddGroup, onSelectView, activeView, currentUserEmail, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ groups, onAddGroup, onSelectView, activeView, currentUserEmail, onLogout }) => {
   return (
     <div className="w-full md:w-64 bg-brand-dark text-white p-4 flex flex-col md:h-screen">
       <h1 className="text-2xl font-bold text-brand-primary mb-6">SplitEase</h1>
@@ -47,23 +43,6 @@ const Sidebar: React.FC<SidebarProps> = ({ friends, groups, onAddFriend, onAddGr
               >
                 <CollectionIcon className="w-5 h-5"/>
                 <span className="truncate">{group.name}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="mt-6">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-lg font-semibold text-gray-400">Friends</h2>
-            <button onClick={onAddFriend} className="text-gray-400 hover:text-white">
-              <UserPlusIcon className="w-5 h-5" />
-            </button>
-          </div>
-          <ul className="space-y-1">
-            {friends.map(friend => (
-              <li key={friend.id} className="flex items-center space-x-2 p-2 rounded">
-                 <Avatar person={friend} className="w-6 h-6"/>
-                <span className="truncate">{friend.name}</span>
               </li>
             ))}
           </ul>

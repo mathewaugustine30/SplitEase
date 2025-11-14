@@ -24,7 +24,7 @@ const Dashboard: React.FC<DashboardProps> = ({ persons, expenses }) => {
   // Spending calculations should exclude settlements for a true spending overview
   const spendingExpenses = expenses.filter(e => e.categoryId !== 'settle');
 
-  const getPerson = (id: string) => persons.find(f => f.id === id);
+  const getPerson = (uid: string) => persons.find(f => f.uid === uid);
 
   const totalOwed = Array.from(balances.values()).filter(v => v > 0).reduce((sum, v) => sum + v, 0);
   const totalDebt = Array.from(balances.values()).filter(v => v < 0).reduce((sum, v) => sum + v, 0);

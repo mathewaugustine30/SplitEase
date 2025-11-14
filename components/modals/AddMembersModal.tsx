@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Modal from '../ui/Modal';
 import Avatar from '../ui/Avatar';
@@ -7,23 +6,23 @@ import { Person, Group } from '../../types';
 interface AddMembersModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddMembers: (memberIds: string[]) => void;
-  friends: Person[];
+  onAddMembers: (memberUids: string[]) => void;
+  users: Person[];
   group: Group;
 }
 
-const AddMembersModal: React.FC<AddMembersModalProps> = ({ isOpen, onClose, onAddMembers, friends, group }) => {
-  const [selectedFriends, setSelectedFriends] = useState<Set<string>>(new Set());
+const AddMembersModal: React.FC<AddMembersModalProps> = ({ isOpen, onClose, onAddMembers, users, group }) => {
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
 
-  const friendsToAdd = friends.filter(friend => !group.memberIds.includes(friend.id));
+  const usersToAdd = users.filter(user => !group.memberUids.includes(user.uid));
 
-  const handleFriendToggle = (friendId: string) => {
-    setSelectedFriends(prev => {
+  const handleUserToggle = (uid: string) => {
+    setSelectedUsers(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(friendId)) {
-        newSet.delete(friendId);
+      if (newSet.has(uid)) {
+        newSet.delete(uid);
       } else {
-        newSet.add(friendId);
+        newSet.add(uid);
       }
       return newSet;
     });
@@ -31,9 +30,9 @@ const AddMembersModal: React.FC<AddMembersModalProps> = ({ isOpen, onClose, onAd
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedFriends.size > 0) {
-      onAddMembers(Array.from(selectedFriends));
-      setSelectedFriends(new Set());
+    if (selectedUsers.size > 0) {
+      onAddMembers(Array.from(selectedUsers));
+      setSelectedUsers(new Set());
       onClose();
     }
   };
@@ -43,31 +42,31 @@ const AddMembersModal: React.FC<AddMembersModalProps> = ({ isOpen, onClose, onAd
       <form onSubmit={handleSubmit}>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Select Friends to Add</label>
+            <label className="block text-sm font-medium text-gray-700">Select Users to Add</label>
             <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-2 space-y-2">
-              {friendsToAdd.length > 0 ? friendsToAdd.map(friend => (
-                <div key={friend.id} className="flex items-center">
+              {usersToAdd.length > 0 ? usersToAdd.map(user => (
+                <div key={user.uid} className="flex items-center">
                   <input
-                    id={`add-member-${friend.id}`}
+                    id={`add-member-${user.uid}`}
                     type="checkbox"
-                    checked={selectedFriends.has(friend.id)}
-                    onChange={() => handleFriendToggle(friend.id)}
+                    checked={selectedUsers.has(user.uid)}
+                    onChange={() => handleUserToggle(user.uid)}
                     className="h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary"
                   />
-                  <label htmlFor={`add-member-${friend.id}`} className="ml-3 flex items-center text-sm text-gray-900 cursor-pointer">
-                    <Avatar person={friend} className="w-6 h-6 mr-2" />
-                    {friend.name}
+                  <label htmlFor={`add-member-${user.uid}`} className="ml-3 flex items-center text-sm text-gray-900 cursor-pointer">
+                    <Avatar person={user} className="w-6 h-6 mr-2" />
+                    {user.name}
                   </label>
                 </div>
               )) : (
-                <p className="text-sm text-gray-500">All your friends are already in this group.</p>
+                <p className="text-sm text-gray-500">All registered users are already in this group.</p>
               )}
             </div>
           </div>
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              disabled={friendsToAdd.length === 0 || selectedFriends.size === 0}
+              disabled={usersToAdd.length === 0 || selectedUsers.size === 0}
               className="bg-brand-primary text-white px-4 py-2 rounded-md hover:bg-brand-secondary disabled:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
             >
               Add Members

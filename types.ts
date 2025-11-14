@@ -1,17 +1,18 @@
 export interface Person {
-  id: string;
+  uid: string;
   name: string;
+  email?: string;
   avatarUrl?: string;
 }
 
 export interface Group {
   id: string;
   name: string;
-  memberIds: string[];
+  memberUids: string[];
 }
 
 export interface SplitDetail {
-  personId: string;
+  uid: string;
   amount: number;
 }
 
@@ -20,15 +21,15 @@ export interface Expense {
   groupId: string;
   description: string;
   amount: number;
-  paidById: string;
+  paidByUid: string;
   split: SplitDetail[];
   date: string; // ISO string
   categoryId?: string;
 }
 
 export interface SimplifiedDebt {
-  from: string; // personId
-  to: string; // personId
+  from: string; // person uid
+  to: string; // person uid
   amount: number;
 }
 
